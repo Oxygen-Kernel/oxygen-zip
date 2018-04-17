@@ -1,0 +1,201 @@
+#!/sbin/sh
+
+##################
+#   Parameters   #
+##################
+OUTFD=/proc/self/fd/$2;
+ZIP=$3
+OUTDIR=/tmp/Oxygen
+KEYCHECK=$OUTDIR/keycheck
+
+##################
+#   Functions    #
+##################
+ui_print() {
+  until [ ! "$1" ]; do
+    echo -e "ui_print $1\nui_print" >> $OUTFD;
+    shift;
+  done;
+}
+
+install_app() {
+  rm -rf /system/app/$1
+  cp -r $OUTDIR/Apps/$1 /system/app/$1
+  chmod 0644 /system/app/$1/$1.apk
+}
+
+keycheck() {
+  $KEYCHECK
+  SEL=$?
+  if [ $SEL -eq 42 ]; then
+    return 0
+  elif [ $SEL -eq 21 ]; then
+    return 1
+  fi
+}
+
+##################
+#  Main Program  #
+##################
+ui_print " "
+ui_print " * * * * * * * * * * * * * * * * * *"
+ui_print " *           OXYGEN KERNEL         *"
+ui_print " * * * * * * * * * * * * * * * * * *"
+ui_print " *               V 3.0             *"
+ui_print " *                                 *"
+ui_print " *            19 Apr 2018          *"
+ui_print " *          By DarkLord1731        *"
+ui_print " * * * * * * * * * * * * * * * * * *"
+ui_print " "
+ui_print "- Initialising"
+rm -rf $OUTDIR
+mkdir $OUTDIR
+cd $OUTDIR
+unzip -o "$ZIP"
+chmod 755 $KEYCHECK
+mkdir AnyKernel2
+cd AnyKernel2
+unzip -o $OUTDIR/AnyKernel2.zip
+chmod 755 $OUTDIR/AnyKernel2/META-INF/com/google/android/update-binary
+
+### Mount Partitions
+ui_print " "
+ui_print "- Mounting /data and /system"
+/sbin/mount /data
+/sbin/mount /system
+sleep 3
+
+### Backup Current Kernel
+ui_print " "
+if [ -e "/data/backup-boot.img" ]; then
+  ui_print "- Backup Already Present"
+else
+  ui_print "- Backing Up Current Kernel"
+  dd if="/dev/block/platform/13540000.dwmmc0/by-name/BOOT" of="/data/backup-boot.img"
+fi
+sleep 3
+
+### Install Kernel
+ui_print " "
+ui_print "- Installing Kernel"
+$OUTDIR/AnyKernel2/META-INF/com/google/android/update-binary dummy 1 $OUTDIR/AnyKernel2.zip
+
+### Mount Partitions Again
+ui_print " "
+ui_print "- Mounting /data and /system"
+/sbin/mount /data
+/sbin/mount /system
+sleep 3
+
+### Fixing Stuff
+ui_print " "
+ui_print "- Fixing Some Issues"
+# Fixed silly unauthorised actions have been detected notification
+rm -rf /system/priv-app/KLMSAgent
+# Fix fingerprint sensor unavailable error
+rm -rf /system/app/mcRegistry/ffffffffd0000000000000000000000a.tlbin
+# Fix Wi-Fi password forgeting after every reboot
+rm -rf /system/vendor/lib/libsecure_storage.so
+cp $OUTDIR/libsecure_storage.so /system/vendor/lib/libsecure_storage.so
+chmod 644 /system/vendor/lib/libsecure_storage.so
+sleep 3
+
+### Spectrum Profiles
+ui_print " "
+if [ -d "/data/media/0/Spectrum/profiles" ]; then
+  ui_print "- Updating Spectrum Profiles"
+else
+  ui_print "- Installing Spectrum Profiles"
+fi
+rm -rf /data/media/0/Spectrum
+cp -r /tmp/Oxygen/Spectrum /data/media/0/Spectrum
+chmod 777 /data/media/0/Spectrum/profiles
+sleep 3
+
+### Oxygen Updator
+ui_print " "
+if [ -d "/system/app/OxygenUpdater" ]; then
+  ui_print "- Updating Oxygen Updater App"
+else
+  ui_print "- Installing Oxygen Updater App"
+fi
+install_app OxygenUpdater
+sleep 3
+
+### Oxygen Control
+ui_print " "
+rm -rf /data/app/com.siddhant.okm-2
+if [ -d "/system/app/OxygenControl" ]; then
+  ui_print "- Updating Oxygen Control App"
+  install_app OxygenControl
+else
+  ui_print " "
+  ui_print "----------------------------------"
+  ui_print "|  Install Oxygen Control App?   |"
+  ui_print "----------------------------------"
+  ui_print " * A mod of Kernel Adiutor app   *"
+  ui_print " * made to support unique Oxygen *"
+  ui_print " * Kernel features which are not *"
+  ui_print " * supported by any other app !! *"
+  ui_print "----------------------------------"
+  ui_print " "
+  ui_print "    Press VOL UP to INSTALL"
+  ui_print "    Press VOL DOWN to CANCEL"
+  ui_print " "
+
+  if keycheck; then 
+    ui_print "- Installing Oxygen Control App"
+    install_app OxygenControl
+    sleep 3
+  fi
+fi
+
+### Spectrum Manager
+ui_print " "
+if [ -d "/system/app/SpectrumManager" ]; then
+  ui_print "- Updating Spectrum Control App"
+  install_app SpectrumManager
+else
+  ui_print " "
+  ui_print "------------------------------------"
+  ui_print "|    Install Spectrum Manager?     |"
+  ui_print "------------------------------------"
+  ui_print " * This app allows you to select   *"
+  ui_print " * default profiles like BALANCED  *"
+  ui_print " * GAMMING PERFORMANCE and BATTERY *"
+  ui_print "------------------------------------"
+  ui_print " NOTE: Spectrum control is already "
+  ui_print "       built into Oxygen Control App"
+  ui_print " "
+  ui_print "    Press VOL UP to INSTALL ANYWAYS"
+  ui_print "    Press VOL DOWN to CANCEL"
+  ui_print " "
+
+  if keycheck; then 
+    ui_print " "
+    ui_print "- Installing Spectrum Manager App"
+    install_app SpectrumManager
+    sleep 3
+  fi
+fi
+
+ui_print " "
+ui_print "- Generating oxygen-uninstaller.zip"
+cp $OUTDIR/oxygen-uninstaller.zip /data/media/0
+sleep 3
+ui_print "  Saved in /sdcard/oxygen-uninstaller.zip"
+sleep 3
+
+### Unmount Partitions
+ui_print " "
+ui_print "- Unmounting /data and /system"
+/sbin/busybox umount /system
+/sbin/busybox umount /data
+sleep 1
+
+ui_print " "
+ui_print "- FINISHED SUCCESSFULLY!"
+ui_print " "
+ui_print "  NOTE: You need to format /data if you get"
+ui_print "        verification error while booting! "
+ui_print " "
