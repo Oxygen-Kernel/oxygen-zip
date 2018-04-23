@@ -179,6 +179,34 @@ else
   fi
 fi
 
+### Wireguard
+ui_print " "
+if [ -d "/system/app/Wireguard" ]; then
+  ui_print "- Updating Wireguard VPN App"
+  install_app Wireguard
+else
+  ui_print " "
+  ui_print "------------------------------------"
+  ui_print "|    Install Wireguard VPN App?    |"
+  ui_print "------------------------------------"
+  ui_print " * WireGuard is a next generation  *"
+  ui_print " * secure VPN tunnel It has better *"
+  ui_print " * better performance and security *"
+  ui_print " * characteristics than other VPNs *"
+  ui_print "------------------------------------"
+  ui_print " "
+  ui_print "    Press VOL UP to INSTALL"
+  ui_print "    Press VOL DOWN to CANCEL"
+  ui_print " "
+
+  if keycheck; then 
+    ui_print " "
+    ui_print "- Installing Wireguard VPN App"
+    install_app Wireguard
+    sleep 3
+  fi
+fi
+
 ui_print " "
 ui_print "- Generating oxygen-uninstaller.zip"
 cp $OUTDIR/oxygen-uninstaller.zip /data/media/0
